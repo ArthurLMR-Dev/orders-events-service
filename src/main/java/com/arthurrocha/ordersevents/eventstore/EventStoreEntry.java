@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import static lombok.AccessLevel.PROTECTED;
 
 @Entity
@@ -29,6 +31,7 @@ public class EventStoreEntry {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EventType type;
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
     private String payload;
     @Column(nullable = false)
