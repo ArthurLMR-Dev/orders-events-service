@@ -20,4 +20,11 @@ public class ApiExceptionHandler {
         problem.setTitle("Invalid order transition");
         return problem;
     }
+
+    @ExceptionHandler(ConcurrentOrderModificationException.class)
+    ProblemDetail handleConcurrentModification(ConcurrentOrderModificationException exception) {
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problem.setTitle("Concurrent order modification");
+        return problem;
+    }
 }

@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import java.util.UUID;
 import com.arthurrocha.ordersevents.events.EventType;
+import com.arthurrocha.ordersevents.orders.ConcurrentOrderModificationException;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -22,13 +23,27 @@ public class EventStoreService {
             return;
         }
         try {
-            repository.save(new EventStoreEntry(event.eventId(), event.aggregateId(), event.type(),
+            repository.saveAndFlush(new EventStoreEntry(event.eventId(), event.aggregateId(), event.type(),
                     serialize(event), event.version(), event.occurredAt()));
         } catch (DataIntegrityViolationException exception) {
-            if (!repository.existsByEventId(event.eventId())) {
+            if (isConstraintViolation(exception, "idx_event_store_aggregate_version")) {
+                throw new ConcurrentOrderModificationException(event.aggregateId());
+            }
+            if (!isConstraintViolation(exception, "event_store_event_id_key")) {
                 throw exception;
             }
         }
+    }
+
+    private boolean isConstraintViolation(DataIntegrityViolationException exception, String constraintName) {
+        Throwable cause = exception;
+        while (cause != null) {
+            if (cause.getMessage() != null && cause.getMessage().contains(constraintName)) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     public Page<EventStoreEntry> history(UUID aggregateId, EventType type, Pageable pageable) {
